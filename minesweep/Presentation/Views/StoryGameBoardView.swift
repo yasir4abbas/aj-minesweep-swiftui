@@ -18,9 +18,9 @@ struct StoryGameBoardView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            ForEach(0..<board.count, id: \. self) { row in
+            ForEach(0..<board.count, id: \.self) { row in
                 HStack(spacing: 0) {
-                    ForEach(0..<board[row].count, id: \. self) { col in
+                    ForEach(0..<board[row].count, id: \.self) { col in
                         let cell = board[row][col]
                         ZStack {
                             Rectangle()
