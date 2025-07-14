@@ -93,6 +93,29 @@ class GameUseCase: ObservableObject {
         moveCount += 1
     }
     
+    func chordCell(row: Int, col: Int) {
+        guard let session = currentSession else { return }
+        
+        let previousState = gameEngine.gameState
+        gameEngine.chordCell(row: row, col: col)
+        
+        // Record move
+        let move = GameMove(sessionId: session.id, row: row, col: col, moveType: "chord")
+        
+        if gameEngine.gameState == .lost {
+            move.result = "lose"
+            endGame(session: session, result: "lost")
+        } else if gameEngine.gameState == .won {
+            move.result = "win"
+            endGame(session: session, result: "won")
+        } else {
+            move.result = "success"
+        }
+        
+        repository.saveGameMove(move)
+        moveCount += 1
+    }
+    
     private func startTimer() {
         gameTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             guard let self = self, let startTime = self.gameStartTime else { return }

@@ -28,9 +28,25 @@ struct GameBoardView: View {
                                 if flagMode.isFlagMode {
                                     gameUseCase.toggleFlag(row: row, col: col)
                                 } else {
-                                    gameUseCase.revealCell(row: row, col: col)
+                                    // Check if this is a revealed number for chording
+                                    let cell = gameUseCase.gameEngine.board[row][col]
+                                    if cell.isRevealed && cell.adjacentMines > 0 {
+                                        // Try chording first, if it doesn't work, do normal reveal
+                                        let previousState = gameUseCase.gameEngine.gameState
+                                        gameUseCase.chordCell(row: row, col: col)
+                                        
+                                        // If chording didn't change the game state, it means no chording occurred
+                                        // In that case, do nothing (since the cell is already revealed)
+                                        if gameUseCase.gameEngine.gameState == previousState {
+                                            // Chording didn't happen, so we don't need to do anything
+                                            // The cell is already revealed
+                                        }
+                                    } else {
+                                        gameUseCase.revealCell(row: row, col: col)
+                                    }
                                 }
-                            }
+                            },
+                            onChord: nil
                         )
                     }
                 }

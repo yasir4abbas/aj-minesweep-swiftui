@@ -13,6 +13,7 @@ struct GameCellView: View {
     let displayText: String
     let cellColor: CellColor
     let onTap: () -> Void
+    let onChord: (() -> Void)?
     
     var body: some View {
         ZStack {
@@ -40,6 +41,7 @@ struct GameCellView: View {
         col: 0,
         displayText: "1",
         cellColor: .revealed,
-        onTap: {}
+        onTap: {},
+        onChord: nil
     )
 } 

@@ -133,6 +133,45 @@ class GameEngine: ObservableObject {
         }
     }
     
+    func chordCell(row: Int, col: Int) {
+        guard gameState == .playing && isValidPosition(row: row, col: col) else { return }
+        
+        let cell = board[row][col]
+        if !cell.isRevealed || cell.adjacentMines == 0 { return }
+        let flagCount = countAdjacentFlags(row: row, col: col)
+        if flagCount == cell.adjacentMines {
+            chordAdjacentCells(row: row, col: col)
+        }
+    }
+    
+    private func countAdjacentFlags(row: Int, col: Int) -> Int {
+        var count = 0
+        for dRow in -1...1 {
+            for dCol in -1...1 {
+                let newRow = row + dRow
+                let newCol = col + dCol
+                if isValidPosition(row: newRow, col: newCol) && board[newRow][newCol].isFlagged {
+                    count += 1
+                }
+            }
+        }
+        return count
+    }
+    
+    private func chordAdjacentCells(row: Int, col: Int) {
+        for dRow in -1...1 {
+            for dCol in -1...1 {
+                let newRow = row + dRow
+                let newCol = col + dCol
+                if isValidPosition(row: newRow, col: newCol) && 
+                   !board[newRow][newCol].isRevealed && 
+                   !board[newRow][newCol].isFlagged {
+                    revealCell(row: newRow, col: newCol)
+                }
+            }
+        }
+    }
+    
     private func revealAllMines() {
         for row in 0..<height {
             for col in 0..<width {
@@ -216,6 +255,7 @@ struct Cell {
     var isRevealed: Bool = false
     var isFlagged: Bool = false
     var adjacentMines: Int = 0
+    var isActive: Bool = true // NEW for story mode masking
 }
 
 enum CellColor {
