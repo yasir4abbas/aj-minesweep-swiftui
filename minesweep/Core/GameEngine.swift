@@ -79,7 +79,7 @@ class GameEngine: ObservableObject {
     }
     
     private func isValidPosition(row: Int, col: Int) -> Bool {
-        return row >= 0 && row < height && col >= 0 && col < width
+        return row >= 0 && row < board.count && col >= 0 && col < (board.first?.count ?? 0)
     }
     
     func revealCell(row: Int, col: Int) {
@@ -240,6 +240,138 @@ class GameEngine: ObservableObject {
         case 7: return .number7
         case 8: return .number8
         default: return .revealed
+        }
+    }
+
+    func newStoryGame(mask: [[Bool]], mineCount: Int) {
+        let height = mask.count
+        let width = mask.first?.count ?? 0
+        self.mineCount = mineCount
+        self.flaggedCount = 0
+        self.revealedCount = 0
+        self.gameState = .playing
+
+        board = Array(repeating: Array(repeating: Cell(), count: width), count: height)
+        for row in 0..<height {
+            for col in 0..<width {
+                board[row][col].isActive = mask[row][col]
+            }
+        }
+        
+        placeMinesForMask(mask: mask, mineCount: mineCount)
+        calculateNumbersForMask(mask: mask)
+    }
+
+    private func placeMinesForMask(mask: [[Bool]], mineCount: Int) {
+        var activePositions: [(Int, Int)] = []
+        for row in 0..<mask.count {
+            for col in 0..<mask[row].count {
+                if mask[row][col] {
+                    activePositions.append((row, col))
+                }
+            }
+        }
+        activePositions.shuffle()
+        for i in 0..<mineCount {
+            let (row, col) = activePositions[i]
+            board[row][col].isMine = true
+        }
+    }
+
+    private func calculateNumbersForMask(mask: [[Bool]]) {
+        for row in 0..<mask.count {
+            for col in 0..<mask[row].count {
+                if board[row][col].isActive && !board[row][col].isMine {
+                    board[row][col].adjacentMines = countAdjacentMinesMasked(row: row, col: col)
+                }
+            }
+        }
+    }
+
+    private func countAdjacentMinesMasked(row: Int, col: Int) -> Int {
+        var count = 0
+        for dRow in -1...1 {
+            for dCol in -1...1 {
+                let newRow = row + dRow
+                let newCol = col + dCol
+                if isValidPosition(row: newRow, col: newCol) && board[newRow][newCol].isActive && board[newRow][newCol].isMine {
+                    count += 1
+                }
+            }
+        }
+        return count
+    }
+
+    // Override revealCell for masked boards
+    func revealCellMasked(row: Int, col: Int) {
+        guard gameState == .playing && isValidPosition(row: row, col: col) else { return }
+        let cell = board[row][col]
+        if !cell.isActive || cell.isRevealed || cell.isFlagged { return }
+        board[row][col].isRevealed = true
+        revealedCount += 1
+        if cell.isMine {
+            gameState = .lost
+            revealAllMinesMasked()
+            return
+        }
+        if cell.adjacentMines == 0 {
+            revealAdjacentCellsMasked(row: row, col: col)
+        }
+        checkWinConditionMasked()
+    }
+
+    private func revealAdjacentCellsMasked(row: Int, col: Int) {
+        for dRow in -1...1 {
+            for dCol in -1...1 {
+                let newRow = row + dRow
+                let newCol = col + dCol
+                if isValidPosition(row: newRow, col: newCol) && board[newRow][newCol].isActive && !board[newRow][newCol].isRevealed {
+                    revealCellMasked(row: newRow, col: newCol)
+                }
+            }
+        }
+    }
+
+    func toggleFlagMasked(row: Int, col: Int) {
+        guard gameState == .playing && isValidPosition(row: row, col: col) else { return }
+        let cell = board[row][col]
+        if !cell.isActive || cell.isRevealed { return }
+        if cell.isFlagged {
+            board[row][col].isFlagged = false
+            flaggedCount -= 1
+            mineCount += 1
+        } else {
+            board[row][col].isFlagged = true
+            flaggedCount += 1
+            mineCount -= 1
+        }
+    }
+
+    private func revealAllMinesMasked() {
+        for row in 0..<board.count {
+            for col in 0..<board[row].count {
+                if board[row][col].isActive && board[row][col].isMine {
+                    board[row][col].isRevealed = true
+                }
+            }
+        }
+    }
+
+    private func checkWinConditionMasked() {
+        var totalActive = 0
+        var revealedActive = 0
+        var totalMines = 0
+        for row in 0..<board.count {
+            for col in 0..<board[row].count {
+                if board[row][col].isActive {
+                    totalActive += 1
+                    if board[row][col].isRevealed { revealedActive += 1 }
+                    if board[row][col].isMine { totalMines += 1 }
+                }
+            }
+        }
+        if revealedActive == totalActive - totalMines {
+            gameState = .won
         }
     }
 }

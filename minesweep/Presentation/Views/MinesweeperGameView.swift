@@ -45,12 +45,14 @@ struct ZoomableScrollView<Content: View>: UIViewRepresentable {
     let gameUseCase: GameUseCase
     let minZoomScale: CGFloat
     let maxZoomScale: CGFloat
+    let initialZoomScale: CGFloat
     
-    init(gameUseCase: GameUseCase, minZoomScale: CGFloat = 0.5, maxZoomScale: CGFloat = 3.0, @ViewBuilder content: () -> Content) {
+    init(gameUseCase: GameUseCase, minZoomScale: CGFloat = 0.5, maxZoomScale: CGFloat = 3.0, initialZoomScale: CGFloat = 0.3, @ViewBuilder content: () -> Content) {
         self.content = content()
         self.gameUseCase = gameUseCase
         self.minZoomScale = minZoomScale
         self.maxZoomScale = maxZoomScale
+        self.initialZoomScale = initialZoomScale
     }
     
     func makeUIView(context: Context) -> UIScrollView {
@@ -83,6 +85,20 @@ struct ZoomableScrollView<Content: View>: UIViewRepresentable {
         
         context.coordinator.hostingController = hostingController
         context.coordinator.boardSize = contentSize
+        context.coordinator.initialZoomScale = initialZoomScale
+        
+        // Set initial zoom scale
+        scrollView.zoomScale = initialZoomScale
+        context.coordinator.centerScrollViewContents(scrollView)
+        
+        // Animate to normal zoom after a short delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            UIView.animate(withDuration: 1.0, delay: 0, options: [.curveEaseInOut], animations: {
+                scrollView.zoomScale = 1.0
+                context.coordinator.centerScrollViewContents(scrollView)
+            })
+        }
+        
         return scrollView
     }
     
@@ -109,6 +125,7 @@ struct ZoomableScrollView<Content: View>: UIViewRepresentable {
     class Coordinator: NSObject, UIScrollViewDelegate {
         var hostingController: UIHostingController<Content>?
         var boardSize: CGSize = .zero
+        var initialZoomScale: CGFloat = 0.3
         
         func viewForZooming(in scrollView: UIScrollView) -> UIView? {
             return hostingController?.view
@@ -118,7 +135,7 @@ struct ZoomableScrollView<Content: View>: UIViewRepresentable {
             centerScrollViewContents(scrollView)
         }
         
-        private func centerScrollViewContents(_ scrollView: UIScrollView) {
+        func centerScrollViewContents(_ scrollView: UIScrollView) {
             guard let contentView = hostingController?.view else { return }
             
             let boundsSize = scrollView.bounds.size
@@ -160,7 +177,7 @@ struct MinesweeperGameView: View {
             VStack(spacing: 0) {
                 GameHeaderView(gameUseCase: gameUseCase)
                 
-                ZoomableScrollView(gameUseCase: gameUseCase, minZoomScale: 0.5, maxZoomScale: 3.0) {
+                ZoomableScrollView(gameUseCase: gameUseCase, minZoomScale: 0.5, maxZoomScale: 3.0, initialZoomScale: 0.3) {
                     GameBoardView(gameUseCase: gameUseCase, flagMode: flagMode)
                 }
                 .overlay(

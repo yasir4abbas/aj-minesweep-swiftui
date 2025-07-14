@@ -11,17 +11,17 @@ let storyLevelMask: [[Bool]] = [
 ]
 
 struct StoryGameBoardView: View {
-    let board: [[Cell]]
+    @ObservedObject var gameEngine: GameEngine
     let onCellTap: (Int, Int) -> Void
     
     private let cellSize: CGFloat = 56
     
     var body: some View {
         VStack(spacing: 0) {
-            ForEach(0..<board.count, id: \.self) { row in
+            ForEach(0..<gameEngine.board.count, id: \.self) { row in
                 HStack(spacing: 0) {
-                    ForEach(0..<board[row].count, id: \.self) { col in
-                        let cell = board[row][col]
+                    ForEach(0..<gameEngine.board[row].count, id: \.self) { col in
+                        let cell = gameEngine.board[row][col]
                         ZStack {
                             Rectangle()
                                 .fill(cell.isActive ? cell.isRevealed ? Color(hex: "E9E1DA") : Color(hex: "E7949A") : Color.clear)
@@ -62,5 +62,7 @@ struct StoryGameBoardView: View {
             }
         }
     }
-    return StoryGameBoardView(board: previewBoard, onCellTap: {_,_ in })
+    let dummyEngine = GameEngine(width: 7, height: 7, mines: 8)
+    dummyEngine.board = previewBoard
+    return StoryGameBoardView(gameEngine: dummyEngine, onCellTap: {_,_ in })
 } 

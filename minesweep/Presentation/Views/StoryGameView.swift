@@ -43,9 +43,34 @@ struct StoryGameView: View {
                     }
                     
                     GameHeaderView(gameUseCase: gameUseCase)
-                    
-                    ZoomableScrollView(gameUseCase: gameUseCase, minZoomScale: 0.5, maxZoomScale: 3.0) {
-                        GameBoardView(gameUseCase: gameUseCase, flagMode: flagMode)
+
+                    if let _ = storyLevel {
+                        // Story mode: use masked board with zoom and chording
+                        ZoomableScrollView(gameUseCase: gameUseCase, minZoomScale: 0.5, maxZoomScale: 3.0, initialZoomScale: 0.3) {
+                            StoryGameBoardView(
+                                gameEngine: gameUseCase.gameEngine,
+                                onCellTap: { row, col in
+                                    let cell = gameUseCase.gameEngine.board[row][col]
+                                    if flagMode.isFlagMode {
+                                        gameUseCase.gameEngine.toggleFlagMasked(row: row, col: col)
+                                    } else if cell.isActive && cell.isRevealed && cell.adjacentMines > 0 {
+                                        // Chording logic for story mode
+                                        let previousState = gameUseCase.gameEngine.gameState
+                                        gameUseCase.gameEngine.chordCell(row: row, col: col)
+                                        if gameUseCase.gameEngine.gameState == previousState {
+                                            // Chording didn't happen, do nothing
+                                        }
+                                    } else {
+                                        gameUseCase.gameEngine.revealCellMasked(row: row, col: col)
+                                    }
+                                }
+                            )
+                        }
+                    } else {
+                        // Classic mode
+                        ZoomableScrollView(gameUseCase: gameUseCase, minZoomScale: 0.5, maxZoomScale: 3.0, initialZoomScale: 0.3) {
+                            GameBoardView(gameUseCase: gameUseCase, flagMode: flagMode)
+                        }
                     }
                     
                     // Game controls
@@ -118,8 +143,13 @@ struct StoryGameView: View {
         }
         .onAppear {
             if gameUseCase.currentSession == nil {
-                let difficulty = storyLevel?.difficulty ?? .beginner
-                gameUseCase.startNewGame(difficulty: difficulty)
+                if let _ = storyLevel {
+                    // Story mode: use mask and mine count
+                    gameUseCase.gameEngine.newStoryGame(mask: storyLevelMask, mineCount: 8)
+                } else {
+                    let difficulty = storyLevel?.difficulty ?? .beginner
+                    gameUseCase.startNewGame(difficulty: difficulty)
+                }
             }
         }
     }
